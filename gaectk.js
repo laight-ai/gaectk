@@ -2,8 +2,8 @@
  * Google Analytics 4 Enhance Ecommerce with Google Tag Manager JavaScript Library
  * http://singleview.co.kr/
  */
-const _g_sGaectkVersion = '1.5.8';
-const _g_sGaectkVersionDate = '2023-11-09';
+const _g_sGaectkVersion = '1.5.9';
+const _g_sGaectkVersionDate = '2025-09-14';
 const 
 	_g_sPrefixBuyNow = 'bn',
 	_g_sPrefixAddToCart = 'atc',
@@ -53,7 +53,6 @@ function checkNonEcConversionGaectk(sVirtualUrl, sPageTitle)
 			_g_bSentConversionPageView = true;
 		}
 	}
-	delete oPvEventInfo;
 }
 
 function sendClickEventGaectk(sCategory, sEventLbl, sLocation, sWindow)
@@ -578,8 +577,6 @@ var gaectkList =
 			{
 				oFirstThumb = oIdContent;  //oIdContent.getElementsByTagName('img')[0];
 			}
-			delete oClsContent;
-			delete oIdContent;
 			if(oFirstThumb)
 			{
 				document.addEventListener('scroll', function () {
@@ -647,7 +644,6 @@ var gaectkList =
 				}
 			}
 		}
-		delete oSingleProductGa4;
 	},
 	_isInViewport: function(el)
 	{   // this method is for gaectkList.patchImpression()
@@ -694,7 +690,6 @@ var gaectkList =
 					_triggerDataLayer('view_promotion', {items: aProduct});
 				}
 			}
-			delete aProduct;
 		}
 		else  // JS API mode
 		{
@@ -744,7 +739,6 @@ var gaectkList =
 					});
 					var aProduct = [];
 				}
-				delete aProduct;
 			}
 		}
 		this._g_bImpressionPatched = true;
@@ -795,7 +789,6 @@ var gaectkDetail =
 				console.log('event - view_item - GA4')
 			}
 		}
-		delete oSingleProductGa4;
 		if(this._g_bFacebookConvLoaded)
 			this._fbSendViewContent();
 		return true;
@@ -833,7 +826,6 @@ var gaectkDetail =
 				console.log('event - buy now - GA4')
 			}
 		}
-		delete oSingleProductGa4;
 		if( this._g_bFacebookConvLoaded )
 			this._fbSendCheckoutInitiation();
 		return true;
@@ -868,7 +860,6 @@ var gaectkDetail =
 				console.log('event - add_to_cart - GA4')
 			}
 		}
-		delete oSingleProductGa4;
 		if(this._g_bFacebookConvLoaded)
 			this._fbSendItemsToCart();
 		return true;
@@ -882,7 +873,6 @@ var gaectkDetail =
 			value: oSingleProduct.price,
 			currency: _g_sCurrency
 		});
-		delete oSingleProduct;
 	},
 	_fbSendCheckoutInitiation : function() 
 	{
@@ -897,7 +887,6 @@ var gaectkDetail =
 			value: oSingleProduct.price,
 			currency: _g_sCurrency
 		});
-		delete oSingleProduct;
 	}
 }
 var gaectkCart = 
@@ -935,7 +924,6 @@ var gaectkCart =
 			oSingleProductGa4.quantity = this._g_aProductInfo[i].quantity;
 			nTotalPrice += oSingleProductGa4.price * this._g_aProductInfo[i].quantity;
 			aCartItem.push(oSingleProductGa4);
-			delete oSingleProductGa4;
 		}
 		if(!nTotalPrice)
 			return false;
@@ -960,7 +948,6 @@ var gaectkCart =
 				console.log('event - view_cart - GA4');
 			}
 		}
-		delete aCartItem;
 	},
 	checkoutSelected : function(aTmpCartSrl)
 	{
@@ -996,7 +983,6 @@ var gaectkCart =
 					aCartToCheckoutGa4.push(oSingleProductGa4);
 					aCartSrl.shift();
 					nTotalPrice += oSingleProductGa4.price * this._g_aProductInfo[i].quantity;
-					delete oSingleProductGa4;
 				}
 			}
 		}
@@ -1022,7 +1008,6 @@ var gaectkCart =
 				console.log('event - begin_checkout selected - GA4')
 			}
 		}
-		delete aCartToCheckoutGa4;
 		if(this._g_bFacebookConvLoaded)
 			this._fbSendCheckoutInitiation();
 	},
@@ -1040,7 +1025,6 @@ var gaectkCart =
 			oSingleProductGa4.quantity = this._g_aProductInfo[i].quantity;
 			aCartToCheckoutGa4.push(oSingleProductGa4);
 			nTotalPrice += oSingleProductGa4.price * this._g_aProductInfo[i].quantity;
-			delete oSingleProductGa4;
 		}
 		if(!nTotalPrice)
 			return false;
@@ -1065,7 +1049,6 @@ var gaectkCart =
 				console.log('event - begin_checkout all - GA4')
 			}
 		}
-		delete aCartToCheckoutGa4;
 		if(this._g_bFacebookConvLoaded)
 			this._fbSendCheckoutInitiation();
 	},
@@ -1084,7 +1067,6 @@ var gaectkCart =
 			aCartToCheckoutGa4.push(oSingleProductGa4);
 			
 			nTotalPrice += oSingleProductGa4.price * this._g_aProductInfo[i].quantity;
-			delete oSingleProductGa4;
 		}
 		if(!nTotalPrice)
 			return false;
@@ -1108,7 +1090,6 @@ var gaectkCart =
 				console.log('event - remove_from_cart all - GA4');
 			}
 		}
-		delete aCartToCheckoutGa4;
 	},
 	removeSelected : function(aTmpCartSrl)
 	{
@@ -1144,7 +1125,6 @@ var gaectkCart =
 
 					aCartSrl.shift();
 					nTotalPrice += oSingleProductGa4.price * this._g_aProductInfo[i].quantity;
-					delete oSingleProductGa4;
 				}
 			}
 		}
@@ -1172,7 +1152,6 @@ var gaectkCart =
 				console.log('event - remove_from_cart selected - GA4')
 			}
 		}
-		delete aCartToRemoveGa4;
 	},
 	_fbSendCheckoutInitiation : function() 
 	{
@@ -1244,7 +1223,6 @@ var gaectkSettlement =
 				console.log('event - add_shipping_info add_payment_info - GA4')
 			}
 		}
-		delete aProductToCheckoutGa4;
 		if(this._g_bFacebookConvLoaded)
 			this._fbSendPaymentInfoAddition();
 	},
@@ -1407,7 +1385,6 @@ var gaectkMypage =
 				console.log('event - refund - GA4')
 			}
 		}
-		delete aProductToRefundGa4;
 	}
 }
 
