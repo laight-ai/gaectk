@@ -2,8 +2,8 @@
  * Google Analytics 4 Enhance Ecommerce with Google Tag Manager JavaScript Library
  * http://singleview.co.kr/
  */
-const _g_sGaectkVersion = '1.5.9';
-const _g_sGaectkVersionDate = '2025-09-14';
+const _g_sGaectkVersion = '1.6.0';
+const _g_sGaectkVersionDate = '2025-09-16';
 const 
 	_g_sPrefixBuyNow = 'bn',
 	_g_sPrefixAddToCart = 'atc',
@@ -32,7 +32,7 @@ var _g_bGtmIdLoaded = false; // eg, 'GTM-XXXXXXXXXX'
 var _g_bGtmGa4Activated = false; // GTM trigger GA4
 var _g_bSentConversionPageView = false;
 
-function checkNonEcConversionGaectk(sVirtualUrl, sPageTitle)
+/*function checkNonEcConversionGaectk(sVirtualUrl, sPageTitle)
 {
 	if(_g_bSentConversionPageView)  // this method can cause double pageview with different title and location
 		return true;
@@ -52,6 +52,41 @@ function checkNonEcConversionGaectk(sVirtualUrl, sPageTitle)
 			gtag('event', 'page_view', oPvEventInfo);  // warning; page_view has been transmitted to GA4 JS API
 			_g_bSentConversionPageView = true;
 		}
+	}
+}*/
+
+function sendViewContentEventGaectk(nVirtualValue, sContentId)
+{
+	console.log('ViewContentEventGaectk triggered ' + sContentId + ' ' + nVirtualValue);
+	nVirtualValue = _enforceInt(nVirtualValue);
+	if(typeof window !== 'undefined' && typeof window.gtag === 'function'){
+		gtag('event','view_content', {  // gtag('event','conversion',
+			// send_to: 'AW-{$layout_info->GOOGLE_ADWORDS_CONV_ID}/{$mi->view_conversion_aw_action_id}',
+			value: nVirtualValue, // 옵션: 해당 상품의 가격 등
+			currency: _g_sCurrency,
+		});
+	}
+	if(window.wcs){  // console.log('NVR wcs activated');
+		// https://naver.github.io/conversion-tracking/pages/01_script_guide_wcstrans/
+		// if(!wcs_add) var wcs_add = {};
+		// wcs_add['wa'] = 's_nvr_ace_counter_key'; // wcs 공통 스크립트에서 이미 실행했다고 가정
+		if(wcs_add['wa'])
+		{
+			console.log('NVR wcs view_page activated ' + nVirtualValue);
+			var _conv = {};
+			_conv.type = '5';  // 기타 5 기타 페이지
+			_conv.value = nVirtualValue;
+			wcs.trans(_conv);
+		}
+	}
+	if(typeof(fbq) != 'undefined' && fbq != null){
+		console.log('FB view_content activated ' + sContentId);
+		fbq('track', 'ViewContent', {
+			content_ids: String(sContentId),
+			content_type: 'content',
+			value: nVirtualValue,
+			currency: _g_sCurrency
+		});
 	}
 }
 
@@ -88,14 +123,32 @@ function sendClickEventGaectk(sCategory, sEventLbl, sLocation, sWindow)
 	}
 }
 
-function sendDisplayEventGaectk(sDisplayedObject)
+function sendDisplayEventGaectk(sDisplayedObject, nEventValue)
 {
 	if(sDisplayedObject === null || sDisplayedObject === undefined || sDisplayedObject.length == 0)
 		return;
-	_sendGaEventWithoutInteraction('displayed', sDisplayedObject);
+	// _sendGaEventWithoutInteraction('displayed', sDisplayedObject, nEventValue);
+	// send pageview 명령 전에 send event 명령을 수행하면 queue에 적재된 EC 관련 정보들이 send event와 함께 pop되어버림
+	// Send data using an event just after set ec-action
+	let sEventName = 'displayed';
+	let oEventInfo = {label: sDisplayedObject, value: _enforceInt(nEventValue), currency: _g_sCurrency};
+	if(_g_bGtmIdLoaded)  // GTM dataLayer Mode
+	{
+		if(_g_bGtmGa4Activated) // GTM trigger GA4
+		{
+			_triggerDataLayer(sEventName, oEventInfo);  // warning; sEventName has been transmitted to GA4 GTM container
+		}
+	}
+	else  // JS API mode
+	{
+		if(_g_bGa4DatastreamIdLoaded)  // GA4
+		{
+			gtag('event', sDisplayedObject, oEventInfo);  // warning; sDisplayedObject has been transmitted to GA4 JS API
+		}
+	}
 }
 
-function _sendGaEventWithoutInteraction(sEventName, sEventLabel, nEventValue)
+/*function _sendGaEventWithoutInteraction(sEventName, sEventLabel, nEventValue)
 {
 	// send pageview 명령 전에 send event 명령을 수행하면 queue에 적재된 EC 관련 정보들이 send event와 함께 pop되어버림
 	// Send data using an event just after set ec-action
@@ -114,7 +167,7 @@ function _sendGaEventWithoutInteraction(sEventName, sEventLabel, nEventValue)
 			gtag('event', sEventLabel, oEventInfo);  // warning; sEventLabel has been transmitted to GA4 JS API
 		}
 	}
-}
+}*/
 
 function _enforceInt(nEventValue)
 {
@@ -789,8 +842,7 @@ var gaectkDetail =
 				console.log('event - view_item - GA4')
 			}
 		}
-		if(this._g_bFacebookConvLoaded)
-			this._fbSendViewContent();
+		this._sendViewContent();
 		return true;
 	},
 	patchBuyNow : function(nTotalQuantity)
@@ -860,33 +912,63 @@ var gaectkDetail =
 				console.log('event - add_to_cart - GA4')
 			}
 		}
-		if(this._g_bFacebookConvLoaded)
-			this._fbSendItemsToCart();
+		// if(this._g_bFacebookConvLoaded)
+		// 	this._fbSendItemsToCart();
+		this._sendItemsToCart();
 		return true;
 	},
-	_fbSendViewContent : function()
+	_sendViewContent : function()
 	{
 		oSingleProduct = gaectkItems.getItemInfoBySrl('GA4', this._g_aProductInfo[0].item_id);
-		fbq('track', 'ViewContent', {
-			content_ids: this._g_aProductInfo[0].item_id,
-			content_type: 'product',
-			value: oSingleProduct.price,
-			currency: _g_sCurrency
-		});
+		if(window.wcs){  // console.log('NVR wcs activated');
+			// https://naver.github.io/conversion-tracking/pages/01_script_guide_wcstrans/
+			// if(!wcs_add) var wcs_add = {};
+			// wcs_add['wa'] = 's_nvr_ace_counter_key'; // wcs 공통 스크립트에서 이미 실행했다고 가정
+			if(wcs_add['wa'])
+			{
+				console.log('NVR wcs view_product activated');
+				var _conv = {};
+				_conv.type = 'view_product';  // N/A: trans 버전에 새로 추가된 신호
+				wcs.trans(_conv);
+			}
+		}
+		if(this._g_bFacebookConvLoaded){
+			fbq('track', 'ViewContent', {
+				content_ids: this._g_aProductInfo[0].item_id,
+				content_type: 'product',
+				value: oSingleProduct.price,
+				currency: _g_sCurrency
+			});
+		}
 	},
 	_fbSendCheckoutInitiation : function() 
 	{
 		fbq('track', 'InitiateCheckout');
 	},
-	_fbSendItemsToCart : function()
+	_sendItemsToCart : function()
 	{
 		oSingleProduct = gaectkItems.getItemInfoBySrl('GA4', this._g_aProductInfo[0].item_id);
-		fbq('track', 'AddToCart', {
-			content_ids: this._g_aProductInfo[0].item_id,
-			content_type: 'product',
-			value: oSingleProduct.price,
-			currency: _g_sCurrency
-		});
+		if(window.wcs){  // console.log('NVR wcs activated');
+			// https://naver.github.io/conversion-tracking/pages/01_script_guide_wcstrans/
+			// if(!wcs_add) var wcs_add = {};
+			// wcs_add['wa'] = 's_nvr_ace_counter_key'; // wcs 공통 스크립트에서 이미 실행했다고 가정
+			if(wcs_add['wa'])
+			{
+				console.log('NVR wcs addtocart activated');
+				var _conv = {};
+				_conv.type = 'add_to_cart';  // 3: 장바구니
+				wcs.trans(_conv);
+			}
+		}
+		if(this._g_bFacebookConvLoaded)
+		{
+			fbq('track', 'AddToCart', {
+				content_ids: this._g_aProductInfo[0].item_id,
+				content_type: 'product',
+				value: oSingleProduct.price,
+				currency: _g_sCurrency
+			});
+		}
 	}
 }
 var gaectkCart = 
@@ -1008,8 +1090,7 @@ var gaectkCart =
 				console.log('event - begin_checkout selected - GA4')
 			}
 		}
-		if(this._g_bFacebookConvLoaded)
-			this._fbSendCheckoutInitiation();
+		this._sendCheckoutInitiation();
 	},
 	checkoutAll : function()
 	{
@@ -1153,9 +1234,24 @@ var gaectkCart =
 			}
 		}
 	},
-	_fbSendCheckoutInitiation : function() 
+	_sendCheckoutInitiation : function() 
 	{
-		fbq('track', 'InitiateCheckout');
+		if(window.wcs){  // console.log('NVR wcs activated');
+			// https://naver.github.io/conversion-tracking/pages/01_script_guide_wcstrans/
+			// if(!wcs_add) var wcs_add = {};
+			// wcs_add['wa'] = 's_nvr_ace_counter_key'; // wcs 공통 스크립트에서 이미 실행했다고 가정
+			if(wcs_add['wa'])
+			{
+				console.log('NVR wcs addtocart activated');
+				var _conv = {};
+				_conv.type = 'begin_checkout';  // 3: 장바구니
+				wcs.trans(_conv);
+			}
+		}
+		if(this._g_bFacebookConvLoaded)
+		{
+			fbq('track', 'InitiateCheckout');
+		}
 	}
 }
 
@@ -1270,12 +1366,21 @@ var gaectkPurchase =
 
 		var nTotalPrice = 0;
 		var aProductToCheckoutGa4 = [];
+		var aProductToCheckoutNvr = [];
 		for(var i = 0; i < nElement; i++)
 		{
 			oSingleProductGa4 = gaectkItems.getItemInfoBySrl('GA4', aProductInfo[i].item_id);
 			oSingleProductGa4.quantity = aProductInfo[i].quantity;
 			oSingleProductGa4.coupon = aProductInfo[i].coupon;
 			aProductToCheckoutGa4.push(oSingleProductGa4);
+			aProductToCheckoutNvr.push({
+				id: oSingleProductGa4.item_id, //string 상품 id (필수)
+				name: oSingleProductGa4.item_name,  //string 상품 명 (필수)
+				category: oSingleProductGa4.item_category,  // "fashion/men/shoes", //string 카테고리
+				quantity: aProductInfo[i].quantity,  //number 결제 수량 (필수)
+				payAmount: oSingleProductGa4.price,  //number 결제 금액 (필수)
+				option: oSingleProductGa4.item_variant  // "color:black, size:260" //string 상품 자체의 옵션 (예: 색상 )
+			});
 			
 			nTotalPrice += oSingleProductGa4.price * aProductInfo[i].quantity;  // plus value
 		}
@@ -1315,18 +1420,34 @@ var gaectkPurchase =
 				console.log('event - purchase - GA4');
 			}
 		}
-		if(this._g_bFacebookConvLoaded)
-			this._fbSendPurchaseComplete(nRevenue);
+		this._sendPurchaseComplete(nOrderSrl, nRevenue, aProductToCheckoutNvr);
 		gaectkStorage.removeData('cookie', _g_sSettledItemListCN)
 	},
-	_fbSendPurchaseComplete : function(nRevenue)
+	_sendPurchaseComplete : function(nOrderSrl, nRevenue, aProductInfo)
 	{
-		fbq('track', 'Purchase', {
-			content_ids: this._g_aFbItemSrls,
-			content_type: 'product',
-			value: nRevenue,
-			currency: _g_sCurrency
-		});
+		if(window.wcs){  // console.log('NVR wcs activated');
+			// https://naver.github.io/conversion-tracking/pages/01_script_guide_wcstrans/
+			// if(!wcs_add) var wcs_add = {};
+			// wcs_add['wa'] = 's_nvr_ace_counter_key'; // wcs 공통 스크립트에서 이미 실행했다고 가정
+			if(wcs_add['wa'])
+			{
+				console.log('NVR wcs purchase activated');
+				var _conv = {};
+				_conv.type = 'purchase';  // 4: 구매
+				_conv.id = String(nOrderSrl); // 전환 ID, 이용자가 한 행동에 대한 ID (예: 주문번호). 없을 경우 생성하지 않거나, null, '' 등 으로 설정
+				_conv.items = aProductToCheckoutNvr;       // 전환 이벤트 행동의 내용 및 대상에 대한 정보 기술
+				_conv.value = nRevenue;
+				wcs.trans(_conv);
+			}
+		}
+		if(this._g_bFacebookConvLoaded){
+			fbq('track', 'Purchase', {
+				content_ids: this._g_aFbItemSrls,
+				content_type: 'product',
+				value: nRevenue,
+				currency: _g_sCurrency
+			});
+		}
 	}
 }
 
